@@ -1,0 +1,9 @@
+Building Aptcoin
+
+See doc/readme-qt.rst for instructions on building Aptcoin-Qt,
+the intended-for-end-users, nice-graphical-interface, reference
+implementation of Aptcoin.
+
+See doc/build-*.txt for instructions on building aptcoind,
+the intended-for-services, no-graphical-interface, reference
+implementation of Aptcoin.
