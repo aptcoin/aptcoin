@@ -40,7 +40,6 @@ LIBS += \
    -l boost_thread$(BOOST_LIB_SUFFIX) \
    -l db_cxx$(BDB_LIB_SUFFIX) \
    -l ssl \
-   -l aqua \
    -l crypto
 
 TESTLIBS += \

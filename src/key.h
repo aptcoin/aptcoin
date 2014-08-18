@@ -224,7 +224,7 @@ public:
 
     // Check whether this private key is valid.
     bool IsValid() const { return fValid; }
-n
+
     // Check whether the public key corresponding to this private key is (to be) compressed.
     bool IsCompressed() const { return fCompressed; }
 
