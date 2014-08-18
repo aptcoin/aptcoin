@@ -10,6 +10,7 @@
 namespace Ui {
     class MiningPage;
 }
+class MPExecutor;
 class ClientModel;
 class WalletModel;
 

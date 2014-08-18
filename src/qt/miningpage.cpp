@@ -17,11 +17,18 @@
 #include <QAbstractItemDelegate>
 #include <QPainter>
 
-#include "miningpage.moc"
-
 extern CWallet* pwalletMain;
 extern void GenerateBitcoins(bool fGenerate, CWallet* pwallet);
 extern bool SoftSetBoolArg(const std::string& strArg, bool fValue);
+
+class MPExecutor : public QObject
+{
+    Q_OBJECT
+
+public slots:
+signals:
+};
+#include "miningpage.moc"
 
 
 MiningPage::MiningPage(QWidget *parent) :
