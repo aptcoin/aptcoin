@@ -150,6 +150,10 @@ Value getmininginfo(const Array& params, bool fHelp)
     obj.push_back(Pair("blocks",        (int)nBestHeight));
     obj.push_back(Pair("currentblocksize",(uint64_t)nLastBlockSize));
     obj.push_back(Pair("currentblocktx",(uint64_t)nLastBlockTx));
+    if (nCurrentNFactor != -1)
+    {
+        obj.push_back(Pair("nfactor",       (int)(nCurrentNFactor+1)));
+    }
     obj.push_back(Pair("difficulty",    (double)GetDifficulty()));
     obj.push_back(Pair("errors",        GetWarnings("statusbar")));
     obj.push_back(Pair("generate",      GetBoolArg("-gen")));
@@ -401,6 +405,9 @@ Value getwork(const Array& params, bool fHelp)
             return false;
         CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot].first;
 
+        // find the hash of the previous block
+        CBlockIndex *pindex = FindBlockByHeight(nBestHeight);
+        pblock->hashPrevBlock = pindex->GetBlockHash();
         pblock->nTime = pdata->nTime;
         pblock->nNonce = pdata->nNonce;
         pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;

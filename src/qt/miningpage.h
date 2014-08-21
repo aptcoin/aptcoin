@@ -6,6 +6,7 @@
 #define MININGPAGE_H
 
 #include <QWidget>
+#include <QThread>
 
 namespace Ui {
     class MiningPage;
@@ -33,11 +34,13 @@ public:
 public slots:
     void startMining();
     void stopMining();
+    void refreshMiningData(const QString&);
 
 signals:
 
 private:
     Ui::MiningPage *ui;
+    MPExecutor *mpe;
     ClientModel *clientModel;
     WalletModel *walletModel;
 

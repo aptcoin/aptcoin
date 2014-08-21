@@ -5,7 +5,7 @@ SetCompressor /SOLID lzma
 
 # General Symbol Definitions
 !define REGKEY "SOFTWARE\$(^Name)"
-!define VERSION 0.0.9.0
+!define VERSION 0.9.0.1
 !define COMPANY "Aptcoin project"
 !define URL http://www.aptcoin.org/
 

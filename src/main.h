@@ -18,7 +18,6 @@ extern CBlockIndex* pindexBest;
 extern unsigned char GetNfactor(unsigned int hashPrevBlock, int64 nTime);
 
 #define GET_HPB(hpb) CBigNum(hpb & 0x00000000000000000000000000000000000000000000000000000000FFFFFFFF).getuint()
-//CBigNum(hpb).getuint()
 
 
 class CWallet;
@@ -93,6 +92,7 @@ extern int nBestHeight;
 extern uint256 nBestChainWork;
 extern uint256 nBestInvalidWork;
 extern uint256 hashBestChain;
+extern int nCurrentNFactor;
 extern CBlockIndex* pindexBest;
 extern unsigned int nTransactionsUpdated;
 extern uint64 nLastBlockTx;

@@ -17,16 +17,45 @@
 #include <QAbstractItemDelegate>
 #include <QPainter>
 
+extern int nCurrentNFactor;
+extern int nBestHeight;
 extern CWallet* pwalletMain;
 extern void GenerateBitcoins(bool fGenerate, CWallet* pwallet);
 extern bool SoftSetBoolArg(const std::string& strArg, bool fValue);
 
-class MPExecutor : public QObject
+class MPExecutor : public QThread
 {
-    Q_OBJECT
+     Q_OBJECT
 
-public slots:
-signals:
+  public:
+    void setThreadRunning(int state)
+    {
+        threadRunning = state;
+    }
+
+    void cleanup()
+    {
+        threadRunning = 0;
+        exit();
+    }
+
+  public slots:
+     void run()
+     {
+         while(threadRunning != 0)
+         {
+             QString result = "Current NFactor: " + QString::number(nCurrentNFactor+1) +
+                 "\nCurrent Block Height: " + QString::number(nBestHeight);
+             emit resultReady(result);
+             msleep(800);
+         }
+     }
+
+  signals:
+     void resultReady(const QString &result);
+
+  private:
+     int threadRunning;
 };
 #include "miningpage.moc"
 
@@ -38,11 +67,16 @@ MiningPage::MiningPage(QWidget *parent) :
     walletModel(0)
 {
     ui->setupUi(this);
+    mpe = new MPExecutor();
+    connect(mpe, SIGNAL(resultReady(QString)), this, SLOT(refreshMiningData(QString)));
 }
 
 MiningPage::~MiningPage()
 {
+    mpe->cleanup();
+    mpe->wait(1000);
     delete ui;
+    delete mpe;
 }
 
 void MiningPage::setClientModel(ClientModel *model)
@@ -70,6 +104,8 @@ void MiningPage::startMining()
         ui->miningStop->setEnabled(true);
 
         ui->miningData->setText("Aptcoin Miner\nMining is active.");
+        mpe->setThreadRunning(1);
+        mpe->start();
     }
     else
     {
@@ -92,9 +128,16 @@ void MiningPage::stopMining()
         ui->miningStop->setEnabled(false);
 
         ui->miningData->setText("Aptcoin Miner\nMining is not active.");
+        mpe->setThreadRunning(0);
+        ui->miningInfo->setText("");
     }
     else
     {
         QMessageBox::information(NULL, "Mining Status Error", "Failed to stop the internal miner.  Possible wallet error detected.");
     }
+}
+
+void MiningPage::refreshMiningData(const QString& data)
+{
+    ui->miningInfo->setText(data);
 }
