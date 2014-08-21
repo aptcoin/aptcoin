@@ -76,6 +76,13 @@
             </item>
            </layout>
           </item>
+          <item>
+           <widget class="QLabel" name="miningInfo">
+            <property name="text">
+             <string/>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -102,13 +109,6 @@
          </property>
         </widget>
        </item>
-       <item>
-        <widget class="QLabel" name="label_2">
-         <property name="text">
-          <string/>
-         </property>
-        </widget>
-       </item>
       </layout>
      </item>
     </layout>
@@ -126,8 +126,8 @@
    <slot>startMining()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>394</x>
-     <y>161</y>
+     <x>416</x>
+     <y>312</y>
     </hint>
     <hint type="destinationlabel">
      <x>430</x>
@@ -142,8 +142,8 @@
    <slot>stopMining()</slot>
    <hints>
     <hint type="sourcelabel">
-     <x>312</x>
-     <y>197</y>
+     <x>334</x>
+     <y>343</y>
     </hint>
     <hint type="destinationlabel">
      <x>323</x>
@@ -155,5 +155,6 @@
  <slots>
   <slot>startMining()</slot>
   <slot>stopMining()</slot>
+  <slot>refreshMiningData(QString)</slot>
  </slots>
 </ui>

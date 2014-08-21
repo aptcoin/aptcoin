@@ -41,6 +41,7 @@ static int64 aptCoinTestnetStartTime = 1407450750;
 static CBigNum bnProofOfWorkLimit(~uint256(0) >> 20); // Aptcoin: starting difficulty is 1 / 2^12
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
+int nCurrentNFactor = -1;
 uint256 nBestChainWork = 0;
 uint256 nBestInvalidWork = 0;
 uint256 hashBestChain = 0;
@@ -1932,9 +1933,9 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
     nBestChainWork = pindexNew->nChainWork;
     nTimeBestReceived = GetTime();
     nTransactionsUpdated++;
-    printf("SetBestChain: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s progress=%f\n",
+    printf("SetBestChain: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s (%lld) progress=%f\n",
       hashBestChain.ToString().c_str(), nBestHeight, log(nBestChainWork.getdouble())/log(2.0), (unsigned long)pindexNew->nChainTx,
-      DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexBest->GetBlockTime()).c_str(),
+      DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexBest->GetBlockTime()).c_str(), pindexBest->GetBlockTime(),
       Checkpoints::GuessVerificationProgress(pindexBest));
 
     // Check the version of the last 100 blocks to see if we need to upgrade:
@@ -2796,10 +2797,14 @@ bool InitBlockIndex() {
         {
             block.nTime    = 1407450750;
             block.nNonce   = 392604501;
+            block.hashMerkleRoot = uint256("0x31309db4dc52bcb4e84281e185c622d306526b15a8a3215717f158487f42d3ef");
         }
 
         assert(block.GetHash() == hashGenesisBlock);
-        assert(block.hashMerkleRoot == uint256("0x16f59de368e366c4f579af84ce095e7efc7ca1587f9db8af43a0b4d235ae944f"));
+        if (!fTestNet)
+        {
+            assert(block.hashMerkleRoot == uint256("0x16f59de368e366c4f579af84ce095e7efc7ca1587f9db8af43a0b4d235ae944f"));
+        }
 
         printf("Merkle Root is good\n");
 
@@ -4523,6 +4528,8 @@ bool CheckWork(CBlock* pblock, CWallet& wallet, CReserveKey& reservekey)
     uint256 hash = pblock->GetPoWHash();
     uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
 
+    printf("CheckWork: hash=%s, hashTarget=%s, In range? %s\n", hash.GetHex().c_str(),
+           hashTarget.GetHex().c_str(), (hash > hashTarget ? "FALSE" : "TRUE"));
     if (hash > hashTarget)
         return false;
 
@@ -4613,6 +4620,7 @@ void static AptcoinMiner(CWallet *pwallet)
             /* printf("Hash of Previous Block -> %u\n", CBigNum(pblock->hashPrevBlock).getuint()); */
             unsigned int hpb = GET_HPB(pblock->hashPrevBlock);
             unsigned char nFactor = GetNfactor(hpb, pblock->nTime);
+            nCurrentNFactor = (int)nFactor;
             unsigned long int scrypt_scratchpad_size_current_block = ((1 << (nFactor + 1)) * 128 ) + 63;
             char *scratchpad = (char *)malloc(scrypt_scratchpad_size_current_block);
             loop
@@ -4659,7 +4667,7 @@ void static AptcoinMiner(CWallet *pwallet)
                         {
                             nLogTime = GetTime();
                             unsigned int hpb = GET_HPB(pblock->hashPrevBlock);
-                            printf("hashmeter %6.0f khash/s (NFactor=%d, hpb=%u)\n", dHashesPerSec/1000.0, nFactor, hpb);
+                            printf("hashmeter %6.0f khash/s (NFactor=%d, hpb=%u)\n", dHashesPerSec/1000.0, (nFactor + 1), hpb);
                         }
                     }
                 }
@@ -4697,6 +4705,11 @@ void static AptcoinMiner(CWallet *pwallet)
 void GenerateBitcoins(bool fGenerate, CWallet* pwallet)
 {
     static boost::thread_group* minerThreads = NULL;
+
+    if (!fGenerate)
+    {
+        nCurrentNFactor = -1;
+    }
 
     int nThreads = GetArg("-genproclimit", -1);
     if (nThreads < 0)
