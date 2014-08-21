@@ -1933,7 +1933,7 @@ bool SetBestChain(CValidationState &state, CBlockIndex* pindexNew)
     nBestChainWork = pindexNew->nChainWork;
     nTimeBestReceived = GetTime();
     nTransactionsUpdated++;
-    printf("SetBestChain: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s (%u) progress=%f\n",
+    printf("SetBestChain: new best=%s  height=%d  log2_work=%.8g  tx=%lu  date=%s (%lld) progress=%f\n",
       hashBestChain.ToString().c_str(), nBestHeight, log(nBestChainWork.getdouble())/log(2.0), (unsigned long)pindexNew->nChainTx,
       DateTimeStrFormat("%Y-%m-%d %H:%M:%S", pindexBest->GetBlockTime()).c_str(), pindexBest->GetBlockTime(),
       Checkpoints::GuessVerificationProgress(pindexBest));
