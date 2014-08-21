@@ -4667,7 +4667,7 @@ void static AptcoinMiner(CWallet *pwallet)
                         {
                             nLogTime = GetTime();
                             unsigned int hpb = GET_HPB(pblock->hashPrevBlock);
-                            printf("hashmeter %6.0f khash/s (NFactor=%d, hpb=%u)\n", dHashesPerSec/1000.0, nFactor, hpb);
+                            printf("hashmeter %6.0f khash/s (NFactor=%d, hpb=%u)\n", dHashesPerSec/1000.0, (nFactor + 1), hpb);
                         }
                     }
                 }
