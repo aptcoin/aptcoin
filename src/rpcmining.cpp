@@ -287,6 +287,9 @@ Value getworkex(const Array& params, bool fHelp)
             return false;
         CBlock* pblock = mapNewBlock[pdata->hashMerkleRoot].first;
 
+        // find the hash of the previous block
+        CBlockIndex *pindex = FindBlockByHeight(nBestHeight);
+        pblock->hashPrevBlock = pindex->GetBlockHash();
         pblock->nTime = pdata->nTime;
         pblock->nNonce = pdata->nNonce;
 
