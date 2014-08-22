@@ -19,6 +19,7 @@
 
 extern int nCurrentNFactor;
 extern int nBestHeight;
+extern double dHashesPerSec;
 extern CWallet* pwalletMain;
 extern void GenerateBitcoins(bool fGenerate, CWallet* pwallet);
 extern bool SoftSetBoolArg(const std::string& strArg, bool fValue);
@@ -45,7 +46,8 @@ class MPExecutor : public QThread
          while(threadRunning != 0)
          {
              QString result = "Current NFactor: " + QString::number(nCurrentNFactor+1) +
-                 "\nCurrent Block Height: " + QString::number(nBestHeight);
+                 "\nCurrent Block Height: " + QString::number(nBestHeight) +
+                 "\nCurrent Hashrate (khash/s): " + QString::number(dHashesPerSec/1000.0);
              emit resultReady(result);
              msleep(800);
          }
