@@ -58,6 +58,7 @@ unsigned int nCoinCacheSize = 5000;
 const unsigned char minNfactor = 5;
 const unsigned char maxNfactor = 13;
 const unsigned char nFactorDiff = (maxNfactor - minNfactor);
+const unsigned int aptCurveBlocksToGoBack = 10;
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for transaction creation) */
 int64 CTransaction::nMinTxFee = 100000;
@@ -1157,31 +1158,37 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
 {
     unsigned int nProofOfWorkLimit = bnProofOfWorkLimit.GetCompact();
 
+    const int64 FIRST_FORK_BLOCK_HEIGHT =
+        (fTestNet ? FIRST_FORK_BLOCK_HEIGHT_TESTNET : FIRST_FORK_BLOCK_HEIGHT_MAINNET);
+
     // Genesis block
     if (pindexLast == NULL)
         return nProofOfWorkLimit;
 
-    // Only change once per interval
-    if ((pindexLast->nHeight+1) % nInterval != 0)
+    // Only change once per interval (if before the first fork block height)
+    if (pindexLast->nHeight <= FIRST_FORK_BLOCK_HEIGHT)
     {
-        // Special difficulty rule for testnet:
-        if (fTestNet)
+        if ((pindexLast->nHeight+1) % nInterval != 0)
         {
-            // If the new block's timestamp is more than 2* 10 minutes
-            // then allow mining of a min-difficulty block.
-            if (pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
-                return nProofOfWorkLimit;
-            else
+            // Special difficulty rule for testnet:
+            if (fTestNet)
             {
-                // Return the last non-special-min-difficulty-rules-block
-                const CBlockIndex* pindex = pindexLast;
-                while (pindex->pprev && pindex->nHeight % nInterval != 0 && pindex->nBits == nProofOfWorkLimit)
-                    pindex = pindex->pprev;
-                return pindex->nBits;
+                // If the new block's timestamp is more than 2* 10 minutes
+                // then allow mining of a min-difficulty block.
+                if (pblock->nTime > pindexLast->nTime + nTargetSpacing*2)
+                    return nProofOfWorkLimit;
+                else
+                {
+                    // Return the last non-special-min-difficulty-rules-block
+                    const CBlockIndex* pindex = pindexLast;
+                    while (pindex->pprev && pindex->nHeight % nInterval != 0 && pindex->nBits == nProofOfWorkLimit)
+                        pindex = pindex->pprev;
+                    return pindex->nBits;
+                }
             }
-        }
 
-        return pindexLast->nBits;
+            return pindexLast->nBits;
+        }
     }
 
     // Aptcoin: This fixes an issue where a 51% attack can change difficulty at will.
@@ -1208,18 +1215,84 @@ unsigned int static GetNextWorkRequired(const CBlockIndex* pindexLast, const CBl
         nActualTimespan = (nTargetTimespan + (nTargetTimespan/2));
     }
 
+    // re-compute using AptCurve re-target if past first fork height
+    if (pindexLast->nHeight > FIRST_FORK_BLOCK_HEIGHT)
+    {
+        /* printf("Using AptCurve difficulty re-target (block %d, Discarding actual time %ld )\n", */
+        /*        pindexLast->nHeight, nActualTimespan); */
+
+        blockstogoback = aptCurveBlocksToGoBack;
+        assert(pindexLast->nHeight > blockstogoback);
+
+        pindexFirst = pindexLast;
+        for (int i = 0; pindexFirst && i < blockstogoback; i++)
+            pindexFirst = pindexFirst->pprev;
+        assert(pindexFirst);
+
+        nActualTimespan = pindexLast->GetBlockTime() - pindexFirst->GetBlockTime();
+
+        // Get average N-factor over last N blocks
+        const CBlockIndex* pindexIter = pindexLast;
+        unsigned int hpb = 0, hpbLast = 0;
+        unsigned char totalNfactor = 0, avgNfactor = 0, currentNfactor = 0;
+        int64 nAddedTimespan = 0;
+        for (int i = 0; pindexIter && i < blockstogoback; i++)
+        {
+            hpb = GET_HPB(pindexIter->GetBlockHash());
+            totalNfactor += GetNfactor(hpb, pindexIter->nTime) + 1;
+            nAddedTimespan += pindexIter->GetBlockTime() - pindexIter->pprev->GetBlockTime();
+            pindexIter = pindexIter->pprev;
+        }
+        assert(pindexFirst);
+        assert(nActualTimespan == nAddedTimespan);
+
+        avgNfactor = (totalNfactor / blockstogoback);
+
+        int64 elapsedTime = (pindexLast->nTime - aptCoinStartTime);
+        unsigned char timeAdjustment = (unsigned char)(elapsedTime / TWO_YEARS_IN_SECONDS);
+        unsigned char nFactorBoundary = ((maxNfactor - minNfactor) + timeAdjustment + 1);
+
+        hpbLast = GET_HPB(pindexLast->GetBlockHash());
+        currentNfactor = GetNfactor(hpbLast, pindexLast->nTime) + 1;
+
+        // heuristically down-play the weight under certain circumstances
+        int weight = aptCurveBlocksToGoBack;
+        if (avgNfactor > nFactorBoundary)
+        {
+            weight -= 3;
+        }
+        if (currentNfactor > nFactorBoundary)
+        {
+            weight -= 3;
+        }
+        if (currentNfactor == (maxNfactor + timeAdjustment))
+        {
+            weight -= 3;
+        }
+
+        nActualTimespan /= weight;
+
+        // try to not allow difficulty to increase too quickly
+        if (nActualTimespan < (nTargetSpacing - (nTargetSpacing/4)))
+        {
+            nActualTimespan = (nTargetSpacing - (nTargetSpacing/4));
+        }
+    }
+    //printf("Using actual timespan: %ld\n", nActualTimespan);
+
     // Retarget
+    int64 adjustedTargetTimespan = ((pindexLast->nHeight > FIRST_FORK_BLOCK_HEIGHT) ? nTargetSpacing : nTargetTimespan);
     CBigNum bnNew;
     bnNew.SetCompact(pindexLast->nBits);
     bnNew *= nActualTimespan;
-    bnNew /= nTargetTimespan;
+    bnNew /= adjustedTargetTimespan;
 
     if (bnNew > bnProofOfWorkLimit)
         bnNew = bnProofOfWorkLimit;
 
     /// debug print
     /* printf("GetNextWorkRequired RETARGET\n"); */
-    /* printf("nTargetTimespan = %"PRI64d"    nActualTimespan = %"PRI64d"\n", nTargetTimespan, nActualTimespan); */
+    /* printf("nTargetTimespan = %"PRI64d"    nActualTimespan = %ld\n", adjustedTargetTimespan, nActualTimespan); */
     /* printf("Before: %08x  %s\n", pindexLast->nBits, CBigNum().SetCompact(pindexLast->nBits).getuint256().ToString().c_str()); */
     /* printf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.getuint256().ToString().c_str()); */
 

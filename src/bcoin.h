@@ -24,4 +24,7 @@ static const int64 TWO_YEARS_IN_SECONDS = (2 * ONE_YEAR_IN_SECONDS);
 /** A burn-in period that tests various aspects of the system */
 static const int64 BURN_IN_PERIOD_SECONDS = 176400;
 
+/** block height of first fork */
+static const int64 FIRST_FORK_BLOCK_HEIGHT_TESTNET = 42;
+static const int64 FIRST_FORK_BLOCK_HEIGHT_MAINNET = 10000;
 #endif /* __BCOIN_H__ */
